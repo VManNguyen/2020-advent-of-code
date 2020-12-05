@@ -32,6 +32,18 @@ fn seat_id(code: &str) -> u64 {
     row_min * 8 + col_min
 }
 
+fn find_seat(mut v : Vec<u64>) -> u64 {
+    v.sort();
+
+    for i in 1..v.len() {
+        if v[i] - v[i-1] != 1 {
+            return v[i] - 1;
+        }
+    }
+
+    0
+}
+
 fn main() {
     let file = File::open("input").expect("Failed to read file input");
     let mut buf_reader = BufReader::new(file);
@@ -41,12 +53,15 @@ fn main() {
     let lines = contents.lines();
 
     let mut max_id : u64 = 0;
+    let mut v : Vec<u64> = Vec::new();
     for line in lines {
         let id = seat_id(line);
+        v.push(id);
         if max_id < id {
             max_id = id;
         }
     }
     
     println!("Max seat id: {}", max_id);
+    println!("Seat id: {}", find_seat(v));
 }
