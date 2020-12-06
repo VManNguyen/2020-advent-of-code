@@ -12,14 +12,22 @@ fn main() {
         .expect("Failed to bufferize file input");
     let lines = contents.lines();
     let mut count : usize = 0;
+    let mut reset : bool = true;
 
     let mut group = HashSet::new();
     for line in lines {
-        let h = HashSet::from_iter(line.chars());
-        group = HashSet::from_iter(group.union(&h).cloned());
         if line.is_empty() {
             count += group.len();
-            group = HashSet::new();
+            reset = true;
+        } else {
+            let h = HashSet::from_iter(line.chars());
+            if reset {
+                group = h.clone();
+                reset = false;
+            } else {
+                group = HashSet::from_iter(group
+                                           .intersection(&h).cloned());
+            }
         }
     }
     count += group.len();
