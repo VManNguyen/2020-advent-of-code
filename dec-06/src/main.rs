@@ -22,7 +22,7 @@ fn main() {
         } else {
             let h = HashSet::from_iter(line.chars());
             if reset {
-                group = h.clone();
+                group = h;
                 reset = false;
             } else {
                 group = HashSet::from_iter(group
