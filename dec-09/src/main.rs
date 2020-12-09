@@ -20,6 +20,20 @@ fn part1(val : i64, window : &mut Vec<i64>) -> bool {
     false
 }
 
+fn part2(val : i64, v : &Vec<i64>) -> i64 {
+    let mut i = 2;
+    while i < v.len() - 1 {
+        let iter = v.windows(i);
+        for e in iter {
+            if e.iter().sum::<i64>() == val {
+                return e.iter().min().unwrap() + e.iter().max().unwrap();
+            }
+        }
+        i += 1;
+    }
+    0
+}
+
 fn main() {
     let file = File::open("input").expect("Failed to read file input");
     let mut buf_reader = BufReader::new(file);
@@ -30,6 +44,7 @@ fn main() {
         .map(|x| x.parse::<i64>().unwrap())
         .collect();
     let window_size = 25;
+    let mut incorrect_value = 0;
 
     for i in window_size..lines.len() {
         let val : i64 = lines[i];
@@ -37,7 +52,10 @@ fn main() {
 
         if !part1(val, &mut window) {
             println!("{} not a sum of elements in window", val);
+            incorrect_value = val;
             break;
         }
     }
+
+    println!("min+max = {}", part2(incorrect_value, &lines));
 }
