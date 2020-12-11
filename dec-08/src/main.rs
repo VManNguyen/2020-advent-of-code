@@ -5,11 +5,26 @@ use std::collections::HashSet;
 
 use regex::Regex;
 
-fn execute_instruction(op : &str, val : i64) -> i64 {
+fn acc_instr(op : &str, val : i64) -> i64 {
     if op == "+" {
         return val;
     } else {
         return -val;
+    }
+}
+
+fn jmp_instr(op : &str, val : i64, curr : usize) -> usize {
+    let n : i64 = acc_instr(op, val);
+    if n.is_negative() {
+        return match curr.checked_sub(n.wrapping_abs() as usize) {
+                Some(inner) => inner,
+                None => 0,
+        };
+    } else {
+        return match curr.checked_add(val as usize) {
+            Some(inner) => inner,
+            None => 0,
+        };
     }
 }
 
@@ -45,7 +60,7 @@ fn get_acc(lines : Vec<&str>) -> i64 {
 
     while i < lines.len() {
         visited.insert(i);
-        println!("Executing: {}", lines[i]);
+        //println!("Executing: {}", lines[i]);
 
         let operands = get_operands(lines[i]);
         if operands == ("false", "false", -1) {
@@ -55,24 +70,11 @@ fn get_acc(lines : Vec<&str>) -> i64 {
         match operands.0 {
             "nop" => {i += 1},
             "acc" => {
-                acc += execute_instruction(operands.1, operands.2);
+                acc += acc_instr(operands.1, operands.2);
                 i += 1;
             },
             "jmp" => {
-                let val : i64 = 
-                    execute_instruction(operands.1, operands.2);
-                if val.is_negative() {
-                    i = match i
-                        .checked_sub(val.wrapping_abs() as usize) {
-                            Some(inner) => inner,
-                            None => break,
-                        };
-                } else {
-                    i = match i.checked_add(val as usize) {
-                        Some(inner) => inner,
-                        None => break,
-                    };
-                }
+                i = jmp_instr(operands.1, operands.2, i);
             }
             _ => {
                 println!("Error reading line: {}", lines[i]);
@@ -89,6 +91,116 @@ fn get_acc(lines : Vec<&str>) -> i64 {
     acc
 }
 
+fn get_fixed_acc(lines : Vec<&str>) -> i64 {
+    let mut i : usize = 0;
+    let mut acc : i64 = 0;
+    let mut visited : HashSet<usize> = HashSet::new();
+
+
+    while i < lines.len() {
+        visited.insert(i);
+        //println!("Executing: {}", lines[i]);
+
+        let operands = get_operands(lines[i]);
+        if operands == ("false", "false", -1) {
+            break;
+        }
+
+        match operands.0 {
+            "nop" => {
+                let path_results : (bool, i64) 
+                    = explore_path(lines.clone(), i, acc, visited.clone());
+                if path_results.0 {
+                    println!("Flipped instruction {}: {}", i, lines[i]);
+                    return path_results.1;
+                }
+                i += 1;
+            },
+            "acc" => {
+                acc += acc_instr(operands.1, operands.2);
+                i += 1;
+            },
+            "jmp" => {
+                let path_results : (bool, i64) 
+                    = explore_path(lines.clone(), i, acc, visited.clone());
+                if path_results.0 {
+                    println!("Flipped instruction {}: {}", i, lines[i]);
+                    return path_results.1;
+                }
+                i = jmp_instr(operands.1, operands.2, i);
+            }
+            _ => {
+                println!("Error reading line: {}", lines[i]);
+                break;
+            }
+        };
+
+        if visited.contains(&i) {
+            println!("Stopped at instruction {}: {}", i, lines[i]);
+            break;
+        }
+    }
+
+    acc
+}
+
+fn explore_path(lines : Vec<&str>, 
+                mut i : usize, 
+                mut acc : i64,
+                visited : HashSet<usize>) -> (bool, i64) {
+    let mut visited_ : HashSet<usize> = visited.clone();
+    visited_.insert(i);
+
+    let operands = get_operands(lines[i]);
+    if operands == ("false", "false", -1) {
+        return (false, 0);
+    }
+    match operands.0 {
+        "nop" => {
+            i = jmp_instr(operands.1, operands.2, i);
+        },
+        "jmp" => {
+            i += 1;
+        },
+        _ => {
+            println!("Error in exploring path");
+            return (false, 0);
+        }
+    };
+
+    while i < lines.len() {
+        visited_.insert(i);
+        //println!("Executing: {}", lines[i]);
+
+        let operands = get_operands(lines[i]);
+        if operands == ("false", "false", -1) {
+            break;
+        }
+
+        match operands.0 {
+            "nop" => {i += 1},
+            "acc" => {
+                acc += acc_instr(operands.1, operands.2);
+                i += 1;
+            },
+            "jmp" => {
+                i = jmp_instr(operands.1, operands.2, i);
+            }
+            _ => {
+                println!("Error reading line: {}", lines[i]);
+                break;
+            }
+        };
+
+        if visited_.contains(&i) {
+            //println!("Stopped at instruction {}: {}", i, lines[i]);
+            return (false, 0);
+        }
+    }
+    
+    (true, acc)
+}
+
 fn main() {
     let file = File::open("input").expect("Failed to read file input");
     let mut buf_reader = BufReader::new(file);
@@ -97,5 +209,6 @@ fn main() {
         .expect("Failed to bufferize file input");
     let lines : Vec<&str> = contents.lines().collect();
 
-    println!("acc: {}", get_acc(lines));
+    println!("acc: {}", get_acc(lines.clone()));
+    println!("fix acc: {}", get_fixed_acc(lines.clone()));
 }
