@@ -84,6 +84,84 @@ fn simulate_boat(contents : &String) {
     println!("Boat distance: {}", x.abs() + y.abs());
 }
 
+fn rotate_wpt(action : &str, val: i64, 
+             x_w : &mut i64, y_w : &mut i64) {
+    let angle : f64;
+    match action {
+        "R" => {
+            angle = -val as f64;
+        },
+        "L" => {
+            angle = val as f64;
+        }
+        _ => {
+            println!("Error in rotation: {}{}", action, val);
+            return;
+        }
+    }
+    let angle = angle.to_radians();
+    let sin = angle.sin() as i64;
+    let cos = angle.cos() as i64;
+
+    let x_rot = *x_w * cos - *y_w * sin;
+    let y_rot = *x_w * sin + *y_w * cos;
+
+    *x_w = x_rot;
+    *y_w = y_rot;
+}
+
+fn translate_wpt(action : &str, val: i64, 
+             x_w : &mut i64, y_w : &mut i64) {
+    match action {
+        "N" => { *y_w += val; },
+        "S" => { *y_w -= val; },
+        "E" => { *x_w += val; },
+        "W" => { *x_w -= val; },
+        _ => {
+            println!("Error in translation: {}{}", action, val);
+        }
+    }
+}
+
+fn simulate_wpt(contents : &String) {
+    let lines = contents.lines();
+    let mut x_w : i64 = 10;
+    let mut y_w : i64 = 1;
+    let mut x : i64 = 0;
+    let mut y : i64 = 0;
+    
+    let re = Regex::new(r"^(\w{1})(\d+)$").unwrap();
+
+    for line in lines {
+        let caps = match re.captures(line) {
+            Some(inner) => inner,
+            None => {
+                println!("Failed to match: {}", line);
+                return;
+            }
+        };
+
+        let action : &str = caps.get(1).unwrap().as_str();
+        let val : i64 = match caps.get(2).unwrap().as_str()
+            .trim().parse() {
+                Ok(num) => num,
+                Err(_) => {
+                    println!("Could not read value: {}", line);
+                    return;
+                }
+            };
+        if action == "L" || action == "R" {
+            rotate_wpt(action, val, &mut x_w, &mut y_w);
+        } else if action == "F" {
+            x = x + val * x_w;
+            y = y + val * y_w;
+        } else {
+            translate_wpt(action, val, &mut x_w, &mut y_w);
+        }
+    }
+    println!("Boat distance: {}", x.abs() + y.abs());
+}
+
 fn main() {
     let file = File::open("input").expect("Failed to read file input");
     let mut buf_reader = BufReader::new(file);
@@ -92,4 +170,5 @@ fn main() {
         .expect("Failed to bufferize file input");
 
     simulate_boat(&contents);
+    simulate_wpt(&contents);
 }
